@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KAJI-LOG Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans JP', sans-serif; background-color: #4f46e5; margin: 0; }
+        .screen { display: none; min-height: 100vh; width: 100%; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .active { display: flex; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes pop { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <!-- 1. ランディング / グループ重複チェック -->
+    <div id="screen-landing" class="screen active">
+        <div class="w-full max-w-sm bg-white rounded-[2.5rem] p-8 shadow-2xl space-y-6 animate-pop">
+            <div class="text-center">
+                <h1 class="text-3xl font-black italic text-indigo-900 uppercase">KAJI-LOG</h1>
+                <p class="text-slate-400 text-[10px] font-bold tracking-widest uppercase">リアルタイム共有家事ログ</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-400 mb-1 block text-left">グループ名</label>
+                    <input id="group-input" type="text" placeholder="例：たなか家" class="w-full p-4 bg-slate-100 rounded-2xl font-bold border-4 border-transparent focus:border-indigo-100 outline-none">
+                    <div id="group-suggestion" class="mt-2 space-y-2 hidden text-left">
+                        <p class="text-rose-500 text-[10px] font-bold">その名前は既に使用されています</p>
+                        <div id="suggestion-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                <button onclick="checkGroup()" id="check-btn" class="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-all">
+                    次へ進む
+                </button>
+                <p id="debug-msg" class="text-[10px] text-slate-300 text-center"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. メンバー設定 -->
+    <div id="screen-setup" class="screen">
+        <div class="w-full max-w-sm bg-white rounded-[2.5rem] p-8 shadow-2xl space-y-6 animate-pop text-slate-800">
+            <h2 class="text-xl font-black italic text-center">メンバーを登録</h2>
+            <div class="space-y-3" id="member-fields">
+                <input type="text" placeholder="名前 1" class="member-name w-full p-3 bg-slate-100 rounded-xl font-bold outline-none border-2 border-transparent focus:border-indigo-100">
+                <input type="text" placeholder="名前 2" class="member-name w-full p-3 bg-slate-100 rounded-xl font-bold outline-none border-2 border-transparent focus:border-indigo-100">
+            </div>
+            <div class="p-4 bg-indigo-50 rounded-xl">
+                <p class="text-[10px] font-bold text-indigo-400 mb-2">自分の名前をタップして開始：</p>
+                <div id="me-selector" class="grid grid-cols-2 gap-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. メインアプリ -->
+    <div id="screen-main" class="hidden min-h-screen bg-slate-50 flex-col text-slate-800">
+        <header class="p-6 bg-white border-b sticky top-0 z-20 shadow-sm flex justify-between items-end">
+            <div>
+                <p id="header-group" class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest"></p>
+                <h1 id="header-user" class="text-3xl font-black">ユーザー</h1>
+            </div>
+            <div class="text-right">
+                <p id="header-date" class="text-sm font-bold text-slate-400"></p>
+                <div class="flex gap-2 mt-1">
+                    <button onclick="switchTab('home')" class="p-2 bg-indigo-100 text-indigo-600 rounded-lg">ホーム</button>
+                    <button onclick="switchTab('history')" class="p-2 bg-slate-100 text-slate-600 rounded-lg">履歴</button>
+                </div>
+            </div>
+        </header>
+
+        <div id="tab-home" class="tab-content active p-5 space-y-4">
+            <div id="task-container" class="space-y-4 pb-20"></div>
+            <button onclick="openAddModal()" class="fixed bottom-8 right-8 w-16 h-16 bg-slate-900 text-white rounded-full shadow-2xl flex items-center justify-center text-3xl font-light z-30">＋</button>
+        </div>
+
+        <div id="tab-history" class="tab-content p-5 space-y-6">
+            <div class="bg-white p-6 rounded-[2rem] shadow-sm space-y-4">
+                <div class="aspect-square w-full max-w-[200px] mx-auto">
+                    <canvas id="contributionChart"></canvas>
+                </div>
+                <div id="chart-legend" class="grid grid-cols-2 gap-2 mt-4"></div>
+            </div>
+            <div id="log-container" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <!-- モーダル -->
+    <div id="modal-add" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-6 z-50">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 space-y-6">
+            <h2 class="text-2xl font-black italic">家事を追加</h2>
+            <input id="new-task-name" type="text" placeholder="家事の名前" class="w-full p-4 bg-slate-100 rounded-2xl font-bold outline-none">
+            <input id="new-task-pts" type="number" value="1" class="w-full p-4 bg-slate-100 rounded-2xl font-bold">
+            <div class="flex gap-3">
+                <button onclick="closeAddModal()" class="flex-1 py-4 bg-slate-100 rounded-2xl font-black">閉じる</button>
+                <button onclick="addTaskToDb()" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black">追加</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+
+        // Firebase設定（空でも動くようにガードを入れます）
+        const firebaseConfig = {
+            apiKey: "",
+            authDomain: "",
+            projectId: "",
+            storageBucket: "",
+            messagingSenderId: "",
+            appId: ""
+        };
+
+        let db = null;
+        let isFirebaseActive = false;
+
+        try {
+            if (firebaseConfig.apiKey) {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                isFirebaseActive = true;
+                document.getElementById('debug-msg').innerText = "Firebase 接続待機中";
+            } else {
+                document.getElementById('debug-msg').innerText = "テストモード（保存されません）";
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('debug-msg').innerText = "接続エラー: テストモードで起動";
+        }
+
+        let currentGroup = "";
+        let currentUser = "";
+        let chartInstance = null;
+        let localData = { chores: [
+            { id: 'c1', name: '食器洗い', pts: 3, doneBy: null },
+            { id: 'c2', name: '掃除', pts: 3, doneBy: null }
+        ], logs: [], members: [] };
+
+        window.checkGroup = async () => {
+            const val = document.getElementById('group-input').value.trim();
+            if (!val) return;
+            
+            const btn = document.getElementById('check-btn');
+            btn.disabled = true;
+            btn.innerText = "確認中...";
+
+            if (isFirebaseActive) {
+                try {
+                    const docRef = doc(db, "kajilog_v2", val);
+                    const snap = await getDoc(docRef);
+                    if (snap.exists()) {
+                        // 重複あり
+                        document.getElementById('group-suggestion').classList.remove('hidden');
+                        btn.disabled = false;
+                        btn.innerText = "次へ進む";
+                        return;
+                    }
+                } catch (e) {
+                    console.warn("Firestore access error, skipping check.");
+                }
+            }
+            
+            currentGroup = val;
+            goToSetup();
+        };
+
+        function goToSetup() {
+            document.getElementById('screen-landing').classList.remove('active');
+            document.getElementById('screen-setup').classList.add('active');
+            const inputs = document.querySelectorAll('.member-name');
+            const selector = document.getElementById('me-selector');
+            const updateMe = () => {
+                selector.innerHTML = "";
+                inputs.forEach(input => {
+                    const name = input.value.trim();
+                    if (name) {
+                        const b = document.createElement('button');
+                        b.className = "p-3 bg-white border-2 border-indigo-100 rounded-xl text-xs font-bold text-indigo-600";
+                        b.innerText = name;
+                        b.onclick = () => startApp(name, Array.from(inputs).map(i => i.value.trim()).filter(v => v));
+                        selector.appendChild(b);
+                    }
+                });
+            };
+            inputs.forEach(i => i.oninput = updateMe);
+        }
+
+        async function startApp(me, members) {
+            currentUser = me;
+            localData.members = members;
+            if (isFirebaseActive) {
+                const docRef = doc(db, "kajilog_v2", currentGroup);
+                await setDoc(docRef, localData, { merge: true });
+                listenToData();
+            } else {
+                renderTasks(localData.chores);
+            }
+            document.getElementById('header-group').innerText = currentGroup;
+            document.getElementById('header-user').innerText = currentUser;
+            document.getElementById('screen-setup').classList.remove('active');
+            document.getElementById('screen-main').classList.replace('hidden', 'flex');
+        }
+
+        function listenToData() {
+            onSnapshot(doc(db, "kajilog_v2", currentGroup), (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    renderTasks(data.chores);
+                    renderLogs(data.logs);
+                    renderChart(data.logs, data.members);
+                }
+            }, (err) => {
+                console.error("Snapshot error:", err);
+                alert("データの読み込みに失敗しました。Firebaseのルールを確認してください。");
+            });
+        }
+
+        window.completeTask = async (id) => {
+            if (isFirebaseActive) {
+                const docRef = doc(db, "kajilog_v2", currentGroup);
+                const snap = await getDoc(docRef);
+                const data = snap.data();
+                const chore = data.chores.find(c => c.id === id);
+                if (chore.doneBy) return;
+                chore.doneBy = currentUser;
+                const newLog = { user: currentUser, task: chore.name, pts: chore.pts, time: new Date().toISOString() };
+                await updateDoc(docRef, { chores: data.chores, logs: arrayUnion(newLog) });
+            }
+        };
+
+        function renderTasks(chores) {
+            const container = document.getElementById('task-container');
+            container.innerHTML = chores.map(c => `
+                <div class="p-5 bg-white rounded-[2rem] flex items-center justify-between border-2 ${c.doneBy ? 'opacity-50' : ''}">
+                    <div><p class="font-black">${c.name}</p><p class="text-xs text-indigo-500">${c.pts} pts</p></div>
+                    ${c.doneBy ? `<span class="text-xs font-bold">${c.doneBy}が完了</span>` : 
+                    `<button onclick="completeTask('${c.id}')" class="px-5 py-3 bg-slate-900 text-white rounded-xl font-black text-sm">完了</button>`}
+                </div>
+            `).join('');
+        }
+
+        window.openAddModal = () => document.getElementById('modal-add').classList.replace('hidden', 'flex');
+        window.closeAddModal = () => document.getElementById('modal-add').classList.replace('flex', 'hidden');
+        window.switchTab = (t) => {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab-'+t).classList.add('active');
+        }
+    </script>
+</body>
+</html>
+
