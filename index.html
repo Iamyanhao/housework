@@ -2,193 +2,133 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KAJI-LOG Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Connectivity Debugger</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        body { font-family: 'Noto Sans JP', sans-serif; background-color: #f1f5f9; color: #1e293b; margin: 0; -webkit-tap-highlight-color: transparent; }
-        .screen { display: none; min-height: 100vh; width: 100%; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
-        .active { display: flex; }
-        .animate-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        #debug-log {
+            font-family: monospace;
+            font-size: 12px;
+            background: #1a1a1a;
+            color: #00ff00;
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border-top: 4px solid #444;
+        }
+        .log-error { color: #ff5555; }
+        .log-info { color: #55aaff; }
+        .log-success { color: #55ff55; }
     </style>
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen flex flex-col">
 
-    <!-- 1. ログイン画面 -->
-    <div id="screen-login" class="screen active">
-        <div class="w-full max-w-sm bg-white rounded-[2.5rem] p-8 shadow-2xl space-y-6 animate-pop border border-slate-100">
-            <div class="text-center">
-                <div class="inline-block px-3 py-1 bg-indigo-100 text-indigo-600 text-[10px] font-black rounded-full mb-2 tracking-widest uppercase">System Secured</div>
-                <h1 class="text-4xl font-black italic text-slate-900 tracking-tighter">KAJI-LOG</h1>
-                <p class="text-slate-400 text-[10px] font-bold tracking-[0.3em] uppercase mt-2">Home Activity Tracker</p>
+    <div class="flex-grow p-6">
+        <header class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Firebase 接続診断</h1>
+            <p class="text-sm text-gray-600">この画面でテスト操作を行い、下のログを確認してください。</p>
+        </header>
+
+        <div class="bg-white p-6 rounded-xl shadow-md space-y-4">
+            <div>
+                <h2 class="font-semibold mb-2">1. 接続テスト</h2>
+                <button id="btn-connect" class="w-full bg-blue-600 text-white py-2 rounded-lg active:bg-blue-700">Firebase初期化 & 匿名認証</button>
             </div>
 
-            <div class="space-y-4">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 ml-3">GROUP ID</label>
-                    <input id="group-id" type="text" placeholder="例: tanaka-home" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-400 outline-none transition-all">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 ml-3">USER NAME</label>
-                    <input id="user-name" type="text" placeholder="あなたの名前" class="w-full p-4 bg-slate-50 rounded-2xl font-bold border-2 border-transparent focus:border-indigo-400 outline-none transition-all">
-                </div>
-                <button onclick="performLogin()" id="login-btn" class="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-xl shadow-lg active:scale-95 transition-all">
-                    ログイン
-                </button>
+            <div>
+                <h2 class="font-semibold mb-2">2. データ保存テスト</h2>
+                <button id="btn-save" class="w-full bg-green-600 text-white py-2 rounded-lg active:bg-green-700">テストデータを送信</button>
             </div>
-            
-            <div id="status-container" class="text-center space-y-2">
-                <p id="auth-status" class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">Ready to sync</p>
-                <div id="error-log" class="hidden text-[10px] text-rose-500 bg-rose-50 p-3 rounded-xl font-mono text-left leading-relaxed"></div>
-            </div>
+        </div>
+
+        <div class="mt-6 text-xs text-gray-500">
+            <p>※ Config情報が未設定の場合、必ずエラーになります。</p>
         </div>
     </div>
 
-    <!-- 2. メイン画面 -->
-    <div id="screen-main" class="screen flex-col !justify-start !p-0 bg-slate-50">
-        <header class="w-full p-6 bg-white border-b border-slate-100 flex flex-col items-center space-y-4 shadow-sm sticky top-0 z-10 glass">
-            <div class="w-full flex justify-between items-center px-2">
-                <span class="text-[9px] font-black text-slate-300 tracking-widest" id="ver-display"></span>
-                <button onclick="logout()" class="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors uppercase flex items-center gap-1">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    Logout
-                </button>
-            </div>
-            <div class="text-center pb-2">
-                <p id="main-group-display" class="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mb-1"></p>
-                <h1 id="main-user-display" class="text-3xl font-black text-slate-900 tracking-tight"></h1>
-            </div>
-            <div id="login-time-display" class="text-[9px] font-bold text-slate-400 px-4 py-1.5 bg-slate-100 rounded-full"></div>
-        </header>
-        
-        <main class="p-6 w-full max-w-md space-y-6">
-            <div class="bg-indigo-600 p-8 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden animate-pop">
-                <div class="relative z-10">
-                    <p class="text-xs font-bold opacity-70 mb-1 uppercase tracking-widest">System Status</p>
-                    <h2 class="text-2xl font-black leading-tight">認証に成功しました<br>記録を開始できます</h2>
-                </div>
-                <div class="absolute -right-4 -bottom-4 opacity-10">
-                    <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.9L9.03 9.06a1 1 0 00.939 0L16.836 4.9A1 1 0 0118 5.774V14.5a1 1 0 01-1 1H3a1 1 0 01-1-1V5.774a1 1 0 011.166-.874z" clip-rule="evenodd"></path></svg>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 gap-4">
-                <div class="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-bold text-slate-400 mb-1">Total Logs</p>
-                        <p class="text-2xl font-black">--</p>
-                    </div>
-                    <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 font-black italic">!</div>
-                </div>
-            </div>
-        </main>
+    <!-- 診断ログ表示エリア -->
+    <div id="debug-log">
+        <div class="log-info">[System] 診断ログが開始されました。操作を待機中...</div>
     </div>
 
+    <!-- Firebase SDK -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
 
-        // --- Firebase設定（ここにあなたの情報を貼り付けてください） ---
-        const VERSION_ID = "v1.1.0-release";
+        const logElement = document.getElementById('debug-log');
+        
+        function logger(msg, type = 'info') {
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            div.className = `log-${type} mb-1`;
+            div.textContent = `[${time}] ${msg}`;
+            logElement.appendChild(div);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // --- ⚠ ここを自分のConfigに書き換える ⚠ ---
         const firebaseConfig = {
-apiKey: "AIzaSyAVnIWuGLZdlx2MsyLAfsDgQ2zVkvh8JSc",
+            apiKey: "AIzaSyAVnIWuGLZdlx2MsyLAfsDgQ2zVkvh8JSc",
   authDomain: "kajilog-135ed.firebaseapp.com",
   projectId: "kajilog-135ed",
   storageBucket: "kajilog-135ed.firebasestorage.app",
   messagingSenderId: "506522172088",
   appId: "1:506522172088:web:c3fe4ad929fc067151d24d"
         };
+        // ----------------------------------------
 
-        const statusEl = document.getElementById('auth-status');
-        const errorEl = document.getElementById('error-log');
-        const btn = document.getElementById('login-btn');
+        let app, auth, db;
 
-        let db = null;
-        try {
-            if (firebaseConfig.apiKey) {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-            }
-        } catch (e) {
-            console.error("Initialization Error", e);
-        }
-
-        window.onload = () => {
-            const savedGroup = localStorage.getItem('kajilog_group');
-            const savedUser = localStorage.getItem('kajilog_user');
-            if (savedGroup && savedUser) {
-                document.getElementById('group-id').value = savedGroup;
-                document.getElementById('user-name').value = savedUser;
-                performLogin(true);
-            }
-        };
-
-        window.performLogin = async (isAuto = false) => {
-            const group = document.getElementById('group-id').value.trim();
-            const user = document.getElementById('user-name').value.trim();
-
-            if (!group || !user) return;
-
-            btn.disabled = true;
-            statusEl.innerText = isAuto ? "セッションを再開中..." : "アクセスを認証中...";
-            errorEl.classList.add('hidden');
-
+        document.getElementById('btn-connect').addEventListener('click', async () => {
             try {
-                let ip = "0.0.0.0";
-                try {
-                    const res = await fetch('https://api.ipify.org?format=json');
-                    const data = await res.json();
-                    ip = data.ip;
-                } catch(e) { console.warn("IP取得失敗"); }
-
-                if (db) {
-                    await addDoc(collection(db, "login_hist"), {
-                        version: VERSION_ID,
-                        groupId: group,
-                        userName: user,
-                        timestamp: serverTimestamp(),
-                        ip: ip,
-                        ua: navigator.userAgent,
-                        isAuto: isAuto
-                    });
+                logger("初期化中...", "info");
+                
+                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    throw new Error("Configがデフォルトのままです。自分のIDに書き換えてください。");
                 }
 
-                localStorage.setItem('kajilog_group', group);
-                localStorage.setItem('kajilog_user', user);
-                showMain(group, user);
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
 
-            } catch (err) {
-                console.error(err);
-                btn.disabled = false;
-                statusEl.innerText = "接続エラー";
-                errorEl.innerText = "Error: " + err.message;
-                errorEl.classList.remove('hidden');
-                if(isAuto) {
-                    localStorage.removeItem('kajilog_group');
-                    localStorage.removeItem('kajilog_user');
-                }
+                logger("SDK読み込み完了。匿名認証を開始します...", "info");
+                
+                const result = await signInAnonymously(auth);
+                logger(`認証成功！ ユーザーID: ${result.user.uid}`, "success");
+
+            } catch (error) {
+                logger(`エラー発生: ${error.message}`, "error");
+                console.error(error);
             }
-        };
+        });
 
-        function showMain(group, user) {
-            document.getElementById('screen-login').classList.remove('active');
-            document.getElementById('screen-main').classList.add('active');
-            document.getElementById('ver-display').innerText = VERSION_ID;
-            document.getElementById('main-group-display').innerText = group;
-            document.getElementById('main-user-display').innerText = user;
-            document.getElementById('login-time-display').innerText = "ログイン時刻: " + new Date().toLocaleString('ja-JP');
-        }
+        document.getElementById('btn-save').addEventListener('click', async () => {
+            try {
+                if (!db) throw new Error("まず「接続テスト」を完了させてください。");
 
-        window.logout = () => {
-            if(confirm("ログアウトして情報を消去しますか？")) {
-                localStorage.removeItem('kajilog_group');
-                localStorage.removeItem('kajilog_user');
-                location.reload();
+                logger("Firestoreへ書き込み中...", "info");
+                
+                const docRef = await addDoc(collection(db, "debug_test"), {
+                    message: "iPadからのテスト送信",
+                    timestamp: serverTimestamp(),
+                    device: navigator.userAgent
+                });
+
+                logger(`書き込み成功！ ドキュメントID: ${docRef.id}`, "success");
+                logger("Firebase ConsoleのFirestoreタブを確認してください。", "success");
+
+            } catch (error) {
+                logger(`保存エラー: ${error.message}`, "error");
             }
-        };
+        });
+
+        // ネットワーク状態の監視
+        window.addEventListener('online', () => logger("ネットワークがオンラインになりました", "info"));
+        window.addEventListener('offline', () => logger("ネットワークがオフラインです", "error"));
+
     </script>
 </body>
 </html>
+
