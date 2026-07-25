@@ -6,7 +6,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
-  createUserWithEmailAndPassword, signInWithEmailAndPassword
+  createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  sendEmailVerification, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc,
@@ -40,6 +41,7 @@ const I18N = {
     signin_google: "用 Google 账户登录",
     or_divider: "或者", email_ph: "邮箱", password_ph: "密码（至少6位）",
     email_login: "邮箱登录", email_signup: "没有账户？邮箱注册", email_pass_required: "请输入邮箱和密码",
+    forgot_password: "忘记密码？", verification_sent: "验证邮件已发送，请查收", enter_email_first: "请先在邮箱框里输入邮箱地址", reset_email_sent: "密码重置邮件已发送，请查收",
     join_group: "加入小组", create_group: "创建小组",
     enter_passcode_hint: "输入 5 位数密码加入伴侣的小组", btn_join: "加入",
     create_hint: "创建小组，系统会生成 5 位密码，分享给你的伴侣", btn_create: "创建小组",
@@ -79,6 +81,7 @@ const I18N = {
     signin_google: "Googleでログイン",
     or_divider: "または", email_ph: "メールアドレス", password_ph: "パスワード（6文字以上）",
     email_login: "メールでログイン", email_signup: "アカウントがない場合はメールで登録", email_pass_required: "メールアドレスとパスワードを入力してください",
+    forgot_password: "パスワードをお忘れですか？", verification_sent: "確認メールを送信しました", enter_email_first: "先にメールアドレスを入力してください", reset_email_sent: "パスワード再設定メールを送信しました",
     join_group: "グループに参加", create_group: "グループ作成",
     enter_passcode_hint: "5桁のパスコードを入力してパートナーのグループに参加", btn_join: "参加",
     create_hint: "グループを作成すると5桁のパスコードが発行されます。パートナーに共有してください", btn_create: "グループ作成",
@@ -118,6 +121,7 @@ const I18N = {
     signin_google: "Sign in with Google",
     or_divider: "or", email_ph: "Email", password_ph: "Password (6+ characters)",
     email_login: "Sign in with email", email_signup: "No account? Sign up with email", email_pass_required: "Please enter email and password",
+    forgot_password: "Forgot password?", verification_sent: "Verification email sent — check your inbox", enter_email_first: "Enter your email above first", reset_email_sent: "Password reset email sent — check your inbox",
     join_group: "Join Group", create_group: "Create Group",
     enter_passcode_hint: "Enter the 5-digit passcode to join your partner's group", btn_join: "Join",
     create_hint: "Create a group and get a 5-digit passcode to share with your partner", btn_create: "Create Group",
@@ -272,11 +276,30 @@ document.getElementById("btn-email-signup")?.addEventListener("click", async () 
   const pass = document.getElementById("password-input").value;
   if (!email || !pass) return showToast(t("email_pass_required"));
   try {
-    await createUserWithEmailAndPassword(auth, email, pass);
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    try {
+      await sendEmailVerification(cred.user);
+      showToast(t("verification_sent"));
+    } catch (verifyErr) {
+      console.error(verifyErr);
+      // account creation still succeeded even if the verification email failed to send
+    }
   } catch (e) {
     showToast(e.code + " — " + e.message);
   }
 });
+
+document.getElementById("btn-forgot-password")?.addEventListener("click", async () => {
+  const email = document.getElementById("email-input").value.trim();
+  if (!email) return showToast(t("enter_email_first"));
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showToast(t("reset_email_sent"));
+  } catch (e) {
+    showToast(e.code + " — " + e.message);
+  }
+});
+
 document.getElementById("btn-signout")?.addEventListener("click", async () => {
   await cleanupListeners();
   await signOut(auth);
