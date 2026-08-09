@@ -46,19 +46,19 @@
   <div id="group-block" class="card hidden">
     <p class="muted" id="who-am-i"></p>
     <div class="group-tabs">
-      <button class="tab-btn active" data-tab="join" data-i18n="join_group">加入小组</button>
-      <button class="tab-btn" data-tab="create" data-i18n="create_group">创建小组</button>
+      <button class="tab-btn active" data-tab="join" data-i18n="join_group">加入家庭</button>
+      <button class="tab-btn" data-tab="create" data-i18n="create_group">创建家庭</button>
     </div>
 
     <div id="tab-join" class="tab-pane active">
-      <p class="hint" data-i18n="enter_passcode_hint">输入 5 位数密码加入伴侣的小组</p>
+      <p class="hint" data-i18n="enter_passcode_hint">输入 5 位数密码加入伴侣的家庭</p>
       <input id="input-passcode" class="passcode-input" inputmode="numeric" maxlength="5" placeholder="•••••">
       <button id="btn-join" class="btn btn-primary" data-i18n="btn_join">加入</button>
     </div>
 
     <div id="tab-create" class="tab-pane">
-      <p class="hint" data-i18n="create_hint">创建小组，系统会生成 5 位密码，分享给你的伴侣</p>
-      <button id="btn-create" class="btn btn-primary" data-i18n="btn_create">创建小组</button>
+      <p class="hint" data-i18n="create_hint">创建家庭，系统会生成 5 位密码，分享给你的伴侣</p>
+      <button id="btn-create" class="btn btn-primary" data-i18n="btn_create">创建家庭</button>
       <div id="created-passcode" class="created-passcode hidden"></div>
     </div>
 
@@ -157,10 +157,10 @@
   <div id="tab-settings-view" class="tab-view">
     <div class="card list-card">
       <button class="list-row" id="row-manage-tasks"><span data-i18n="manage_tasks">管理家务</span><span>›</span></button>
-      <button class="list-row" id="row-rename-group"><span data-i18n="rename_group">修改小组名字</span><span>›</span></button>
+      <button class="list-row" id="row-rename-group"><span data-i18n="rename_group">修改家庭名字</span><span>›</span></button>
       <button class="list-row" id="row-change-passcode"><span data-i18n="change_passcode">修改密码</span><span>›</span></button>
       <button class="list-row" id="row-copy-passcode"><span data-i18n="current_passcode">当前密码</span><span id="current-passcode-val">-</span></button>
-      <button class="list-row" id="row-exit-group"><span data-i18n="exit_group">退出小组</span><span>›</span></button>
+      <button class="list-row" id="row-exit-group"><span data-i18n="exit_group">退出家庭</span><span>›</span></button>
     </div>
 
     <div id="manage-tasks-detail" class="card hidden"></div>
@@ -180,11 +180,11 @@
       </div>
       <div id="admin-unlocked" class="hidden">
         <div class="admin-stats">
-          <div><b id="admin-total-groups">0</b><span data-i18n="total_groups">总组数</span></div>
+          <div><b id="admin-total-groups">0</b><span data-i18n="total_groups">总家庭数</span></div>
           <div><b id="admin-total-users">0</b><span data-i18n="total_users">总用户数</span></div>
           <div><b id="admin-total-records">0</b><span data-i18n="total_records">总记录数</span></div>
         </div>
-        <button class="list-row" id="row-view-groups"><span data-i18n="view_all_groups">查看所有小组</span><span>›</span></button>
+        <button class="list-row" id="row-view-groups"><span data-i18n="view_all_groups">查看所有家庭</span><span>›</span></button>
         <button class="list-row" id="row-view-users"><span data-i18n="view_all_users">查看所有用户</span><span>›</span></button>
         <button class="list-row" id="row-view-records"><span data-i18n="view_all_records">查看所有记录</span><span>›</span></button>
         <div id="admin-detail"></div>
